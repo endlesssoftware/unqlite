@@ -1,5 +1,5 @@
 !									!
-! 2013 April 17								!
+! 2013 July 11								!
 !									!
 ! The author disclaims copyright to this source code.  In place of	!
 ! a legal notice, here is a blessing:					!
@@ -9,8 +9,8 @@
 !    May you share freely, never taking more than you give.		!
 !									!
 !***********************************************************************!
-!	This module builds a linker options file that contains the	!
-! definition of the SQLite 3 symbol vector for either Alpha or Itanium.	!
+!	This module extracts the individual source modules from the     !
+! amalgamated UnQLite source module.					!
 !									!
 
 @^A%SPLIT_SOURCE V1.0%		! Identify myself...			!
