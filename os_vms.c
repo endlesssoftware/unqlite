@@ -1,6 +1,6 @@
 /*
 ** This vector defines all the methods that can operate on an
-** unqilte_file for OpenVMS.
+** unqlite_file for OpenVMS.
 */
 static const unqlite_io_methods vmsIoMethod = {
   1,                              /* iVersion */
