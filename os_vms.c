@@ -792,117 +792,10 @@ static int vmsFullPathname(
   status = sys$parse(&fab);
   if( $VMS_STATUS_SUCCESS(status) ){
     *nam.nam$l_ver = '\0';
-    return SQLITE_OK;
+    return UNQLITE_OK;
   }
 
-  return SQLITE_ERROR;
-}
-
-#ifndef SQLITE_OMIT_LOAD_EXTENSION
-/*
-** -- possibly allocate a structure of a pair of descriptors
-**    that contains the default part and the name part, after
-**    parsing the incoming name.  Need to check what we have...
-*/
-static void *vmsDlOpen(
-  sqlite3_vfs *notUsed,
-  const char *zName
-){
-  struct dsc$descriptor *dImagename = 0;
-  struct dsc$descriptor dName;
-  int status;
-
-  static $DESCRIPTOR(prefix, "SQLITE3_EXTENSION_");
-
-  dImagename = sqlite3_malloc(sizeof(*dImagename));
-  if( dImagename ){
-    dImagename->dsc$w_length = 0;
-    dImagename->dsc$b_dtype = DSC$K_DTYPE_T;
-    dImagename->dsc$b_class = DSC$K_CLASS_D;
-    dImagename->dsc$a_pointer = 0;
-
-    dName.dsc$w_length = strlen(zName);
-    dName.dsc$b_dtype = DSC$K_DTYPE_T;
-    dName.dsc$b_class = DSC$K_CLASS_S;
-    dName.dsc$a_pointer = (char *)zName;
-
-    status = str$concat(dImagename, &prefix, &dName);
-    if( $VMS_STATUS_SUCCESS(status) ){
-      return dImagename;
-    }else{
-      sqlite3_free(dImagename);
-    }
-  }
-
-  return 0;
-}
-
-static void (*vmsDlSym(
-  sqlite3_vfs *pVfs,
-  void *pHandle,
-  const char *zSymbol
-))(void){
-  struct dsc$descriptor *dName = pHandle;
-  struct dsc$descriptor dSymbol;
-  int flags = LIB$M_FIS_MIXEDCASE;
-  void (*result)(void) = 0;
-
-  dSymbol.dsc$w_length = strlen(zSymbol);
-  dSymbol.dsc$b_dtype = DSC$K_DTYPE_T;
-  dSymbol.dsc$b_class = DSC$K_CLASS_S;
-  dSymbol.dsc$a_pointer = (char *)zSymbol;
-
-  lib$find_image_symbol(dName, &dSymbol, &result, 0, &flags);
-
-  return result;
-}
-
-# define vmsDlError 0
-
-static void vmsDlClose(
-  sqlite3_vfs *notUsed,
-  void *pHandle
-){
-  struct dsc$descriptor *dName = pHandle;
-
-  if( dName ){
-    str$free1_dx(dName);
-    sqlite3_free(dName);
-  }
-}
-#else
-# define vmsDlOpen 0
-# define vmsDlError 0
-# define vmsDlSym 0
-# define vmsDlClose 0
-#endif
-
-static int vmsRandomness(
-  sqlite3_vfs *pVfs,        /* VFS record */
-  int nBuf,                 /* Length of output buffer */
-  char *zBuf                /* Buffer to write random data to */
-){
-  static int seed = 0;
-
-  char *pBuf = zBuf;
-  float rval;
-  int bcnt;
-
-  if( !seed ){
-    unsigned int time[2];
-
-    sys$gettim(time);
-    seed = time[0] ^ time[1] ^ getpid();
-  }
-
-  while( pBuf < (zBuf + nBuf) ){
-    rval = mth$random(&seed);
-    bcnt = min(pBuf - (zBuf + nBuf), sizeof(rval));
-    memcpy(pBuf, &rval, bcnt);
-    pBuf += bcnt;
-  }
-
-  return SQLITE_OK;
+  return UNQLITE_ERROR;
 }
 
 static int vmsSleep(
@@ -929,46 +822,19 @@ static int vmsSleep(
 }
 
 /*
-** Find the current time (in Universal Coordinated Time).  Write into *piNow
-** the current time and date as a Julian Day number times 86_400_000.  In
-** other words, write into *piNow the number of milliseconds since the Julian
-** epoch of noon in Greenwich on November 24, 4714 B.C according to the
-** proleptic Gregorian calendar.
-**
-** On success, return 0.  Return 1 if the time and date cannot be found.
-*/
-static int vmsCurrentTimeInt64(
-  sqlite3_vfs *pVfs,        /* VFS record */
-  sqlite3_int64 *piNow
-){
-  static const sqlite3_int64 vmsEpoch = (sqlite3_int64)207360043200000;
-  sqlite3_int64 t;
-
-  sys$gettim(&t);
-  *piNow = vmsEpoch + (t / 10000);
-  return 0;
-}
-
-/*
-** Find the current time (in Universal Coordinated Time).  Write the
-** current time and date as a Julian Day number into *prNow and
-** return 0.  Return 1 if the time and date cannot be found.
-*/
-static int vmsCurrentTime(sqlite3_vfs *pVfs,
-                          double *pNow){
-  sqlite3_int64 t = 0;
-
-  vmsCurrentTimeInt64(pVfs, &t);
-  *pNow = t / 86400000.0;
-  return 0;
-}
-
-static int vmsGetLastError(
-  sqlite3_vfs *pVfs,        /* VFS record */
-  int mxBuf,
-  char *zBuf
-){
-  return 0;
+ * Export the current system time.
+ */
+static int vmsCurrentTime(unqlite_vfs *pVfs,Sytm *pOut)
+{
+        struct tm *pTm;
+        time_t tt;
+        SXUNUSED(pVfs);
+        time(&tt);
+        pTm = gmtime(&tt);
+        if( pTm ){ /* Yes, it can fail */
+                STRUCT_TM_TO_SYTM(pTm,pOut);
+        }
+        return UNQLITE_OK;
 }
 
 /*
