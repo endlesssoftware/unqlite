@@ -12,8 +12,16 @@
 **
 ** This file contains code that is specific to OpenVMS.
 */
+#ifndef UNQLITE_AMALGAMATION
 #include "unqliteInt.h"
-#if SQLITE_OS_VMS               /* This file is used for OpenVMS only */
+#endif
+#if defined (__VMS__)
+/*
+** This file contains the VFS implementation for OepnVMS systems.
+*/
+/*
+** standard include files
+*/
 #include <armdef.h>
 #include <atrdef.h>
 #include <chpdef.h>
@@ -71,11 +79,11 @@ struct ile3 {
 ** and the equivalent OpenVMS DLM levels.
 */
 const static int lock_modes[] = {
-  LCK$K_NLMODE,    /* SQLITE_LOCK_NONE */
-  LCK$K_PRMODE,    /* SQLITE_LOCK_SHARED */
-  LCK$K_PWMODE,    /* SQLITE_LOCK_RESERVED */
-  -1,              /* SQLITE_LOCK_PENDING */
-  LCK$K_EXMODE     /* SQLITE_LOCK_EXCLUSIVE */
+  LCK$K_NLMODE,    /* UNQLITE_LOCK_NONE */
+  LCK$K_PRMODE,    /* UNQLITE_LOCK_SHARED */
+  LCK$K_PWMODE,    /* UNQLITE_LOCK_RESERVED */
+  -1,              /* UNQLITE_LOCK_PENDING */
+  LCK$K_EXMODE     /* UNQLITE_LOCK_EXCLUSIVE */
 };
 
 /*
@@ -539,99 +547,7 @@ static int vmsFileControl(
 static int vmsSectorSize(
   sqlite3_file *id          /* File to get sector size from */
 ){
-  return SQLITE_DEFAULT_SECTOR_SIZE;
-}
-
-static int vmsDeviceCharacteristics(
-  sqlite3_file *id          /* File to close */
-){
-  return SQLITE_IOCAP_ATOMIC512 | SQLITE_IOCAP_SEQUENTIAL;
-}
-
-static int vmsShmMap(
-  sqlite3_file *id,               /* Handle open on database file */
-  int iRegion,                    /* Region to retrieve */
-  int szRegion,                   /* Size of regions */
-  int bExtend,                    /* True to extend file if necessary */
-  void volatile **pp              /* OUT: Mapped memory */
-){
-  vmsFile *pFile = (vmsFile *)id;
-  int status;
-#if 0
-  // generate the lock name...
-
-  status = sys$enqw(EFN$C_ENF, LCK$K_NLMODE, &lksb,
-                    LCK$M_NOQUEUE | LCK$M_SYSTEM | LCK$M_EXPEDITE, lock_name,
-                    0, 0, 0, 0, PSL$C_USER, 0, 0);
-  if( $VMS_STATUS_SUCCESS(status) ){
-    status = sys$enqw(EFN$C_ENF, LCK$K_EXMODE, &lksb,
-                      LCK$M_NOQUEUE | LCK$M_SYSTEM | LCK$M_CONVERT, 0,
-    if( $VMS_STATUS_SUCCESS(status) ){
-      status = sys$mgblsc();
-      if( $VMS_STATUS_SUCCESS(status) ){
-      } else if( status == ... ){
-        status = sys$crmpsc();
-      } else {
-        // error
-      }
-    } else {
-      // if because its already allocate?
-        // mpgblsc
-      // else
-        // error
-    }
-  } else {
-    // report an error...
-  }
-#endif
-  return SQLITE_OK;
-}
-
-static int vmsShmLock(
-  sqlite3_file *id,
-  int offset,
-  int n,
-  int flags
-){
-  int lkmode;
-#if 0
-  if( flags & SQLITE_SHM_UNLOCK ){
-    lkmode = LCK$K_NLMODE;
-  } else if( flags & SQLITE_SHM_SHARED ){
-    lkmode = LCK$K_PRMODE;
-  } else if( flags & SQLITE_SHM_EXCLUSIVE ){
-    lkmode = LCK$K_EXMODE;
-  }
-
-  status = sys$enqw(EFN$C_ENF, lkmode,
-
-  // report appropriate status value...
-#endif
-  return SQLITE_OK;
-}
-
-static void vmsShmBarrier(
-  sqlite3_file *id
-){
-  int status;
-#if 0
-  status = sys$updsecw();
-  if( $VMS_STATUS_SUCCESS(status)
-    && $VMS_STATUS_SUCCESS(status == iosb[0]) ){
-    // report success...
-  } else {
-    // translate error
-  }
-#endif
-}
-
-static int vmsShmUnmap(
-  sqlite3_file *id,
-  int deleteFlag
-){
-  // hmmm, how to unmap a temporary section? $delva?
-
-  return SQLITE_OK;
+  return UNQLITE_DEFAULT_SECTOR_SIZE;
 }
 
 /*
@@ -642,10 +558,10 @@ static int vmsShmUnmap(
 
 /*
 ** This vector defines all the methods that can operate on an
-** sqlite3_file for OpenVMS.
+** unqlite_file for OpenVMS.
 */
-static const sqlite3_io_methods vmsIoMethod = {
-  2,                              /* iVersion */
+static const unqlite_io_methods vmsIoMethod = {
+  1,                              /* iVersion */
   vmsClose,                       /* xClose */
   vmsRead,                        /* xRead */
   vmsWrite,                       /* xWrite */
@@ -655,13 +571,7 @@ static const sqlite3_io_methods vmsIoMethod = {
   vmsLock,                        /* xLock */
   vmsUnLock,                      /* xUnlock */
   vmsCheckReservedLock,           /* xCheckReservedLock */
-  vmsFileControl,                 /* xFileControl */
   vmsSectorSize,                  /* xSectorSize */
-  vmsDeviceCharacteristics,       /* xDeviceCharacteristics */
-  vmsShmMap,                      /* xShmMap */
-  vmsShmLock,                     /* xShmLock */
-  vmsShmBarrier,                  /* xShmBarrier */
-  vmsShmUnmap                     /* xShmUnmap */
 };
 
 /****************************************************************************
@@ -1061,39 +971,31 @@ static int vmsGetLastError(
   return 0;
 }
 
-int sqlite3_os_init(void){
-  static sqlite3_vfs vmsVfs = {
-    2,                   /* fVersion */
-    sizeof(vmsFile),     /* szOsFile */
+/*
+ * Export the OpenVMS VFS.
+ */
+UNQLITE_PRIVATE const unqlite_vfs * unqliteExportBuiltinVfs(void)
+{
+	static const unqlite_vfs sVmsvfs = {
+                "VMS",               /* Vfs name */
+                1,                   /* Vfs structure version */
+                sizeof(vmsFile),     /* szOsFile */
 #if defined(NAML$C_MAXRSS)
-    NAML$C_MAXRSS,       /* mxPathname */
+		NAML$C_MAXRSS,       /* mxPathname */
 #else
-    NAM$C_MAXRSS,        /* mxPathname */
+		NAM$C_MAXRSS,        /* mxPathname */
 #endif
-    0,                   /* pNext */
-    "vms",               /* zName */
-    0,                   /* pAppData */
-    vmsOpen,             /* xOpen */
-    vmsDelete,           /* xDelete */
-    vmsAccess,           /* xAccess */
-    vmsFullPathname,     /* xFullPathname */
-    vmsDlOpen,           /* xDlOpen */
-    vmsDlError,          /* xDlError */
-    vmsDlSym,            /* xDlSym */
-    vmsDlClose,          /* xDlClose */
-    vmsRandomness,       /* xRandomness */
-    vmsSleep,            /* xSleep */
-    vmsCurrentTime,      /* xCurrentTime */
-    vmsGetLastError,     /* xGetLastError */
-    vmsCurrentTimeInt64, /* xCurrentTimeInt64 */
-  };
+                vmsOpen,             /* xOpen */
+                vmsDelete,           /* xDelete */
+                vmsAccess,           /* xAccess */
+                vmsFullPathname,     /* xFullPathname */
+                0,                   /* xTmp */
+                vmsSleep,            /* xSleep */
+                vmsCurrentTime,      /* xCurrentTime */
+                0,                   /* xGetLastError */
+	};
+	return &sVmsvfs;
 
-  sqlite3_vfs_register(&vmsVfs, 1);
-  return SQLITE_OK;
 }
 
-int sqlite3_os_end(void){
-  return SQLITE_OK;
-}
-
-#endif /* SQLITE_OS_VMS */
+#endif /* __VMS__ */
