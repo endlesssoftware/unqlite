@@ -55,11 +55,6 @@
 # define FAT struct fatdef
 #endif
 
-/*
-** Include code that is common to all os_*.c files
-*/
-#include "os_common.h"
-
 #ifdef min
 # undef min
 #endif
