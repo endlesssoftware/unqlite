@@ -217,9 +217,12 @@ struct unqlite_vm
  * The default size of a database page.
  */
 #ifndef UNQLITE_DEFAULT_PAGE_SIZE
-# undef UNQLITE_DEFAULT_PAGE_SIZE
-#endif
 # define UNQLITE_DEFAULT_PAGE_SIZE 4096 /* 4K */
+#endif
+#if UNQLITE_DEFAULT_PAGE_SIZE > UNQLITE_MAX_PAGE_SIZE
+# undef UNQLITE_DEFAULT_PAGE_SIZE
+# define UNQLITE_DEFAULT_PAGE_SIZE UNQLITE_MAX_PAGE_SIZE
+#endif
 /* Forward declaration */
 typedef struct Bitvec Bitvec;
 /* Private library functions */
