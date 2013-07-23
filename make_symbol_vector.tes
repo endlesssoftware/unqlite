@@ -1,5 +1,5 @@
 !									!
-! 2013 March 10								!
+! 2013 July 23								!
 !									!
 ! The author disclaims copyright to this source code.  In place of	!
 ! a legal notice, here is a blessing:					!
@@ -10,14 +10,14 @@
 !									!
 !***********************************************************************!
 !	This module contains the code that builds the symbol vector	!
-!  for SQLite3.  It does this by reading in an existing symbol table,	!
+!  for UnQLite3.  It does this by reading in an existing symbol table,	!
 !  then the symbols defined in the object library.  Any new symbols are !
 !  tacked on the end and the new symbol vector is saved.  If any symbols!
 !  are not present in the object library that are listed in the symbol  !
 !  vectore, are warning is issued.					!
 !									!
 
-@^A%MAKE_SYMBOL_VECTOR  V2.0%	! Identify myself...			!
+@^A%MAKE_SYMBOL_VECTOR  V1.0%	! Identify myself...			!
 13^T 10^T
 
 0J Z"N <@FS%^ES% %;>		! Clean up the buffer, if it's there	!
@@ -71,7 +71,7 @@ ESUS [S EVUS [S ETUS [S EUUS [S	! so we can restore the user to		!
 ! Z$ is platform specific transfer vector definition !
 ! N$ is new symbols from library listing	!
 ! T$ is symbol table !
-! H$ contains SQLITE_API prefixed stuff from sqlite3.h header file !
+! H$ contains UNQLITE_APIEXPORT prefixed stuff from unqlite.h header file !
 ! !
 ! -- keep moving everything into mainline...arch-specific is only macros!
 ! A$ contains macro to generate Alpha/I64 symbol vector !
@@ -126,17 +126,17 @@ HK					! Clear the buffer		!
 
 ! --------------------------------------------------------------------- !
 ! Here we load all lines from the header file that describes the public	!
-! interface to SQLite3, sqlite3.h, and store it away in H$.  This is	!
+! interface to UnQLite, unqlite.h, and store it away in H$.  This is	!
 ! used to verify the global symbols read from the library listing are	!
 ! in fact public routines (and data cells).				!
 ! --------------------------------------------------------------------- !
 :QN"N					! if lib listing loaded	then	!
     @^A%...Loading public header file for comparison...%
     @^UH%%				!   Clear header file buffer	!
-    :@ER%SRC_DIR:SQLITE3.H%"S		!   Open public, if success	!
+    :@ER%SRC_DIR:UNQLITE.H%"S		!   Open public, if success	!
     	< :EY;				!     then Yank in a page	!
-	    < :@S%^ELSQLITE_API^ES%;	!       grab SQLITE_API lines	!
-		:@FB%^Xsqlite3_%"S
+	    < :@S%^ELUNQLITE_APIEXPORT^ES%; !   grab UNQLITE_APIEXPORT lines	!
+		:@FB%^Xunqlite_%"S
 		    ^S+1C
 	    	    :XH			!	stick them in H$	!
 		'
@@ -170,13 +170,13 @@ HK					! Clear the buffer		!
 	HXH				!     store in H$		!
     	@^A%done...% 13^T 10^T		!     report			!
     |					!   else			!
-	@^A%unable to open SRC_DIR:SQLITE3.H% 13^T 10^T
+	@^A%unable to open SRC_DIR:UNQLITE.H% 13^T 10^T
     '					!   endif			!
 '					! endif				!
 
 ! --------------------------------------------------------------------- !
 ! Load the existing symbol table.  We use this to test for missing	!
-! entries (useful when building a new version of SQLite) as well as	!
+! entries (useful when building a new version of UnQLite) as well as	!
 ! retaining a record of the symbol table, so it can be updated without	!
 ! losing compatability.							!
 ! --------------------------------------------------------------------- !
